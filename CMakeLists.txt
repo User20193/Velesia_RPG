@@ -1,0 +1,89 @@
+cmake_minimum_required(VERSION 3.15...3.29)
+project(rpg_engine VERSION 0.1.0)
+
+# Fix for new CMake versions complaining about Raylib's internal older CMake policies
+set(CMAKE_POLICY_DEFAULT_CMP0148 OLD)
+if(POLICY CMP0150)
+  cmake_policy(SET CMP0150 OLD)
+endif()
+
+# Crucial fix for "Compatibility with CMake < 3.5 has been removed" in nested dependencies
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
+
+# C++17 is required for pybind11 and good practices
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+include(FetchContent)
+
+# 1. Fetch Raylib
+FetchContent_Declare(
+    raylib
+    GIT_REPOSITORY https://github.com/raysan5/raylib.git
+    GIT_TAG 5.0
+)
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
+set(CUSTOMIZE_BUILD ON CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(raylib)
+
+# 2. Fetch Pybind11
+FetchContent_Declare(
+    pybind11
+    GIT_REPOSITORY https://github.com/pybind/pybind11.git
+    GIT_TAG v2.11.1
+)
+FetchContent_MakeAvailable(pybind11)
+
+# 3. Fetch EnTT
+FetchContent_Declare(
+    entt
+    GIT_REPOSITORY https://github.com/skypjack/entt.git
+    GIT_TAG v3.13.0
+)
+FetchContent_MakeAvailable(entt)
+
+# 4. Fetch nlohmann/json
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.11.3
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
+# 5. Create the Python module
+set(SOURCES
+    engine/bindings/bindings.cpp
+    engine/core/engine.cpp
+    engine/graphics/texture_manager.cpp
+    engine/graphics/camera.cpp
+    engine/ecs/scene.cpp
+    engine/assets/asset_manager.cpp
+    engine/assets/tilemap_loader.cpp
+)
+pybind11_add_module(engine ${SOURCES})
+
+# Link Raylib, EnTT, and json to the Python module
+target_link_libraries(engine PRIVATE raylib EnTT::EnTT nlohmann_json::nlohmann_json)
+
+# Include directories
+target_include_directories(engine PRIVATE engine)
+
+# Determine the extension based on the platform
+if(WIN32)
+    set(PYTHON_MODULE_EXTENSION ".pyd")
+else()
+    set(PYTHON_MODULE_EXTENSION ".so")
+endif()
+
+# Ensure the output goes to the game directory so python can find it,
+# and force the exact name 'engine.pyd' or 'engine.so' without Python version suffixes.
+set_target_properties(engine PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/game
+    LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/game
+    LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/game
+    PREFIX ""
+    SUFFIX ${PYTHON_MODULE_EXTENSION}
+)
