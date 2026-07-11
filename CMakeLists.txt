@@ -62,6 +62,7 @@ set(SOURCES
     engine/ecs/scene.cpp
     engine/assets/asset_manager.cpp
     engine/assets/tilemap_loader.cpp
+    engine/assets/texture_generator.cpp
 )
 pybind11_add_module(engine ${SOURCES})
 

@@ -3,6 +3,7 @@
 #include "../core/engine.h"
 #include "../graphics/camera.h"
 #include "../assets/tilemap_loader.h"
+#include "../assets/texture_generator.h"
 #include "raylib.h"
 
 namespace py = pybind11;
@@ -19,6 +20,14 @@ PYBIND11_MODULE(engine, m) {
             py::arg("dest_x"), py::arg("dest_y"), "Draw a part of a texture")
         .def("load_sprite_sheet", &TextureManager::load_sprite_sheet, py::arg("name"), py::arg("filepath"), "Load a sprite sheet using the intelligent AssetManager")
         .def("draw_sprite_frame", &TextureManager::draw_sprite_frame, py::arg("name"), py::arg("frame_index"), py::arg("dest_x"), py::arg("dest_y"), "Draw a specific frame from a loaded sprite sheet");
+
+    // Bind TextureGenerator
+    py::class_<rpg::TextureGenerator>(m, "TextureGenerator")
+        .def(py::init<>(), "Initialize the Texture Generator")
+        .def("set_seed", &rpg::TextureGenerator::set_seed, py::arg("seed"), "Set the random seed for noise generation")
+        .def("generate_grass", &rpg::TextureGenerator::generate_grass, py::arg("filepath"), py::arg("width"), py::arg("height"), "Generate a seamless grass texture PNG")
+        .def("generate_water", &rpg::TextureGenerator::generate_water, py::arg("filepath"), py::arg("width"), py::arg("height"), "Generate a seamless water texture PNG")
+        .def("generate_dirt", &rpg::TextureGenerator::generate_dirt, py::arg("filepath"), py::arg("width"), py::arg("height"), "Generate a seamless dirt texture PNG");
 
     // Bind Scene (ECS)
     py::class_<Scene>(m, "Scene")
