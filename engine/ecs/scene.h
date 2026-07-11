@@ -23,6 +23,9 @@ public:
 
     void add_enemy(uint32_t entity, float hp, float speed, float damage);
     bool has_enemy(uint32_t entity);
+    float get_enemy_hp(uint32_t entity);
+    void set_enemy_hp(uint32_t entity, float hp);
+    float get_enemy_max_hp(uint32_t entity); // we will store max_hp alongside hp
 
     uint32_t get_pooled_entity();
     void return_pooled_entity(uint32_t entity);

@@ -67,6 +67,12 @@ def main():
     player_speed = 300.0 # Pixels per second
     player_size = 32.0
 
+    # Player Stats
+    player_hp = 100.0
+    player_max_hp = 100.0
+    player_damage = 25.0
+    player_attack_cooldown = 0.0
+
     # Animation state (Python side for now, can be moved to C++ component later)
     current_frame = 0
     frame_timer = 0.0
@@ -190,6 +196,31 @@ def main():
 
         # Attack logic
         is_attacking = eng.is_mouse_button_down(engine.MouseButtons.MOUSE_BUTTON_LEFT)
+        if player_attack_cooldown > 0:
+            player_attack_cooldown -= dt
+
+        # Combat (Damage enemies)
+        if is_attacking and player_attack_cooldown <= 0.0:
+            player_attack_cooldown = 0.3 # Attack speed
+            # Check all active enemies
+            for ent in active_entities:
+                if scene.has_enemy(ent):
+                    ex, ey = scene.get_transform(ent)
+                    ew, eh = scene.get_collider(ent)
+
+                    # Check if mouse is hovering over the enemy
+                    if (mouse_world_x >= ex and mouse_world_x <= ex + ew and
+                        mouse_world_y >= ey and mouse_world_y <= ey + eh):
+
+                        # Distance check (melee range)
+                        dist_to_mouse = ((px + player_size/2 - mouse_world_x)**2 + (py + player_size/2 - mouse_world_y)**2)**0.5
+                        if dist_to_mouse < 100.0:
+                            hp = scene.get_enemy_hp(ent)
+                            hp -= player_damage
+                            if hp <= 0:
+                                scene.return_pooled_entity(ent)
+                            else:
+                                scene.set_enemy_hp(ent, hp)
 
         # --- DRAW ---
         eng.begin_drawing()
@@ -220,8 +251,25 @@ def main():
                 ex, ey = scene.get_transform(ent)
                 ew, eh = scene.get_collider(ent)
                 eng.draw_rectangle(int(ex), int(ey), int(ew), int(eh), 255, 0, 255) # Magenta enemies
+
+                # Draw Health Bar
+                hp = scene.get_enemy_hp(ent)
+                max_hp = scene.get_enemy_max_hp(ent)
+                hp_perc = max(0.0, hp / max_hp)
+
+                # Background red bar
+                eng.draw_rectangle(int(ex), int(ey - 10), int(ew), 6, 200, 0, 0)
+                # Foreground green bar
+                eng.draw_rectangle(int(ex), int(ey - 10), int(ew * hp_perc), 6, 0, 200, 0)
+
                 if debug_mode:
                     eng.draw_rectangle_lines(int(ex), int(ey), int(ew), int(eh), 255, 0, 0)
+
+                # Enemy damaging player logic
+                if eng.check_collision_recs(px, py, player_size, player_size, ex, ey, ew, eh):
+                    player_hp -= 10.0 * dt # DPS
+                    if player_hp < 0: player_hp = 0
+
             elif scene.has_collider(ent):
                 ox, oy = scene.get_transform(ent)
                 ow, oh = scene.get_collider(ent)
@@ -260,11 +308,17 @@ def main():
         # --- DRAW UI ---
         # UI is drawn AFTER end_mode(), so it stays on the screen
 
+        # Player Health Bar UI
+        eng.draw_rectangle(20, 20, 200, 20, 100, 100, 100) # BG
+        hp_perc = player_hp / player_max_hp
+        eng.draw_rectangle(20, 20, int(200 * hp_perc), 20, 255, 50, 50) # FG
+        eng.draw_text(f"HP: {int(player_hp)}/{int(player_max_hp)}", 25, 22, 16, 255, 255, 255)
+
         if debug_mode:
             fps = eng.get_fps()
-            eng.draw_rectangle(10, 10, 200, 70, 0, 0, 0, 150) # Dark semi-transparent background
-            eng.draw_text(f"FPS: {fps}", 20, 20, 20, 0, 255, 0)
-            eng.draw_text(f"Player: {int(px)}, {int(py)}", 20, 45, 20, 255, 255, 255)
+            eng.draw_rectangle(10, 50, 200, 70, 0, 0, 0, 150) # Dark semi-transparent background
+            eng.draw_text(f"FPS: {fps}", 20, 60, 20, 0, 255, 0)
+            eng.draw_text(f"Player: {int(px)}, {int(py)}", 20, 85, 20, 255, 255, 255)
 
         eng.end_drawing()
 

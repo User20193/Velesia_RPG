@@ -47,6 +47,9 @@ PYBIND11_MODULE(engine, m) {
         .def("get_collider", &Scene::get_collider, py::arg("entity"), "Get Collider component as (width, height) tuple")
         .def("add_enemy", &Scene::add_enemy, py::arg("entity"), py::arg("hp"), py::arg("speed"), py::arg("damage"), "Add or replace Enemy component")
         .def("has_enemy", &Scene::has_enemy, py::arg("entity"), "Check if entity has an Enemy component")
+        .def("get_enemy_hp", &Scene::get_enemy_hp, py::arg("entity"), "Get current health of an enemy")
+        .def("set_enemy_hp", &Scene::set_enemy_hp, py::arg("entity"), py::arg("hp"), "Set current health of an enemy")
+        .def("get_enemy_max_hp", &Scene::get_enemy_max_hp, py::arg("entity"), "Get maximum health of an enemy")
         .def("update_active_chunks", &Scene::update_active_chunks, py::arg("center_x"), py::arg("center_y"), py::arg("radius"), "Update which entities are active based on distance from center")
         .def("get_active_entities", &Scene::get_active_entities, "Get a list of all currently active entities")
         .def("load_tiled_json", [](Scene& self, const std::string& filepath) {

@@ -61,11 +61,31 @@ std::pair<float, float> Scene::get_collider(uint32_t entity) {
 }
 
 void Scene::add_enemy(uint32_t entity, float hp, float speed, float damage) {
-    registry.emplace_or_replace<Enemy>(static_cast<entt::entity>(entity), hp, speed, damage);
+    registry.emplace_or_replace<Enemy>(static_cast<entt::entity>(entity), hp, hp, speed, damage);
 }
 
 bool Scene::has_enemy(uint32_t entity) {
     return registry.all_of<Enemy>(static_cast<entt::entity>(entity));
+}
+
+float Scene::get_enemy_hp(uint32_t entity) {
+    if (has_enemy(entity)) {
+        return registry.get<Enemy>(static_cast<entt::entity>(entity)).hp;
+    }
+    return 0.0f;
+}
+
+void Scene::set_enemy_hp(uint32_t entity, float hp) {
+    if (has_enemy(entity)) {
+        registry.get<Enemy>(static_cast<entt::entity>(entity)).hp = hp;
+    }
+}
+
+float Scene::get_enemy_max_hp(uint32_t entity) {
+    if (has_enemy(entity)) {
+        return registry.get<Enemy>(static_cast<entt::entity>(entity)).max_hp;
+    }
+    return 1.0f;
 }
 
 uint32_t Scene::get_pooled_entity() {

@@ -96,15 +96,19 @@ bool TextureGenerator::generate_grass(const std::string& filepath, int width, in
     baseNoise.SetSeed(seed_);
     baseNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
     baseNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
-    baseNoise.SetFractalOctaves(3);
+    baseNoise.SetFractalOctaves(4);
 
     FastNoiseLite bladeNoise;
     bladeNoise.SetSeed(seed_ + 1);
-    bladeNoise.SetNoiseType(FastNoiseLite::NoiseType_Value);
+    bladeNoise.SetNoiseType(FastNoiseLite::NoiseType_Cellular);
+    bladeNoise.SetCellularDistanceFunction(FastNoiseLite::CellularDistanceFunction_EuclideanSq);
+    bladeNoise.SetCellularReturnType(FastNoiseLite::CellularReturnType_Distance);
+    bladeNoise.SetCellularJitter(1.0f);
 
     std::vector<std::pair<float, ColorRGB>> grassGradient = {
-        {-1.0f, {34, 139, 34, 255}},   // Dark Green
-        {0.0f, {50, 168, 82, 255}},    // Medium Green
+        {-1.0f, {25, 110, 25, 255}},   // Very Dark Green
+        {-0.2f, {34, 139, 34, 255}},   // Dark Green
+        {0.3f, {50, 168, 82, 255}},    // Medium Green
         {1.0f, {85, 194, 66, 255}}     // Light Green
     };
 
@@ -113,11 +117,18 @@ bool TextureGenerator::generate_grass(const std::string& filepath, int width, in
 
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            float base = get_seamless_noise(baseNoise, x, y, width, height, 0.05f);
-            float blade = get_seamless_noise(bladeNoise, x, y, width, height, 5.0f);
+            // Sharper, more detailed base noise
+            float base = get_seamless_noise(baseNoise, x, y, width, height, 1.5f);
 
-            // Mix base variation with high frequency "blades"
-            float final_val = base * 0.7f + blade * 0.3f;
+            // Very high frequency noise for blades
+            float blade = get_seamless_noise(bladeNoise, x, y, width, height, 25.0f);
+            // Invert cellular distance to get sharp tips
+            blade = 1.0f - std::abs(blade);
+            // Sharpen the blades
+            blade = std::pow(blade, 3.0f);
+
+            // Mix
+            float final_val = base * 0.6f + blade * 0.4f;
 
             ColorRGB rgb = map_gradient(final_val, grassGradient);
             pixels[y * width + x] = { rgb.r, rgb.g, rgb.b, rgb.a };
@@ -134,18 +145,20 @@ bool TextureGenerator::generate_stone(const std::string& filepath, int width, in
     stoneNoise.SetSeed(seed_ + 5);
     stoneNoise.SetNoiseType(FastNoiseLite::NoiseType_Cellular);
     stoneNoise.SetCellularDistanceFunction(FastNoiseLite::CellularDistanceFunction_EuclideanSq);
-    stoneNoise.SetCellularReturnType(FastNoiseLite::CellularReturnType_CellValue);
-    stoneNoise.SetCellularJitter(0.9f);
+    // Use Distance2Add or Distance2Sub for cool fractured stone looks
+    stoneNoise.SetCellularReturnType(FastNoiseLite::CellularReturnType_Distance2Sub);
+    stoneNoise.SetCellularJitter(1.0f);
 
-    FastNoiseLite crackNoise;
-    crackNoise.SetSeed(seed_ + 6);
-    crackNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    crackNoise.SetFractalType(FastNoiseLite::FractalType_Ridged);
-    crackNoise.SetFractalOctaves(3);
+    FastNoiseLite detailNoise;
+    detailNoise.SetSeed(seed_ + 6);
+    detailNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    detailNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
+    detailNoise.SetFractalOctaves(3);
 
     std::vector<std::pair<float, ColorRGB>> stoneGradient = {
-        {-1.0f, {90, 90, 95, 255}},
-        {0.0f, {130, 130, 135, 255}},
+        {-1.0f, {40, 40, 45, 255}},    // Deep cracks
+        {-0.2f, {90, 90, 95, 255}},    // Base stone
+        {0.5f, {130, 130, 135, 255}},  // Highlights
         {1.0f, {180, 180, 185, 255}}
     };
 
@@ -154,14 +167,20 @@ bool TextureGenerator::generate_stone(const std::string& filepath, int width, in
 
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            float val = get_seamless_noise(stoneNoise, x, y, width, height, 0.15f);
-            float crack = get_seamless_noise(crackNoise, x, y, width, height, 0.1f);
+            // Highly increase frequency so it's not one giant blob
+            float cell = get_seamless_noise(stoneNoise, x, y, width, height, 4.0f);
+            float detail = get_seamless_noise(detailNoise, x, y, width, height, 6.0f);
 
-            ColorRGB rgb = map_gradient(val, stoneGradient);
+            // Combine structured cellular noise with rough detail noise
+            float final_val = cell * 0.7f + detail * 0.3f;
 
-            // Add cracks
-            if (crack > 0.6f) {
-                rgb.r /= 2; rgb.g /= 2; rgb.b /= 2;
+            ColorRGB rgb = map_gradient(final_val, stoneGradient);
+
+            // Draw a subtle border around the block to make it look like a distinct tile
+            if (x < 2 || x > width - 3 || y < 2 || y > height - 3) {
+                rgb.r = static_cast<unsigned char>(rgb.r * 0.6f);
+                rgb.g = static_cast<unsigned char>(rgb.g * 0.6f);
+                rgb.b = static_cast<unsigned char>(rgb.b * 0.6f);
             }
 
             pixels[y * width + x] = { rgb.r, rgb.g, rgb.b, rgb.a };
@@ -178,11 +197,12 @@ bool TextureGenerator::generate_wood(const std::string& filepath, int width, int
     woodNoise.SetSeed(seed_ + 7);
     woodNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
     woodNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
-    woodNoise.SetFractalOctaves(3);
+    woodNoise.SetFractalOctaves(4);
 
     std::vector<std::pair<float, ColorRGB>> woodGradient = {
-        {-1.0f, {74, 47, 29, 255}},    // Dark Wood
-        {0.0f, {125, 82, 51, 255}},    // Medium Wood
+        {-1.0f, {50, 25, 10, 255}},    // Very Dark Wood grooves
+        {-0.5f, {74, 47, 29, 255}},    // Dark Wood
+        {0.2f, {125, 82, 51, 255}},    // Medium Wood
         {1.0f, {158, 107, 70, 255}}    // Light Wood
     };
 
@@ -191,13 +211,22 @@ bool TextureGenerator::generate_wood(const std::string& filepath, int width, int
 
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            // Stretch the noise vertically to create wood grain
-            float val = get_seamless_noise(woodNoise, x, y, width, height, 0.3f, 0.02f);
+            // Heavily stretch the noise vertically to create sharp wood grain
+            // Increased frequencies for much more detail
+            float val = get_seamless_noise(woodNoise, x, y, width, height, 8.0f, 0.3f);
 
-            // Add some "rings" by taking the sine of the noise
-            val = std::sin(val * 20.0f);
+            // Add hard "rings/fibers" by aggressively wrapping the sine function
+            val = std::sin(val * 40.0f); // High multiplier = lots of thin lines
 
             ColorRGB rgb = map_gradient(val, woodGradient);
+
+            // Wood plank border effect
+            if (x < 2 || x > width - 3 || y < 2 || y > height - 3) {
+                rgb.r = static_cast<unsigned char>(rgb.r * 0.5f);
+                rgb.g = static_cast<unsigned char>(rgb.g * 0.5f);
+                rgb.b = static_cast<unsigned char>(rgb.b * 0.5f);
+            }
+
             pixels[y * width + x] = { rgb.r, rgb.g, rgb.b, rgb.a };
         }
     }

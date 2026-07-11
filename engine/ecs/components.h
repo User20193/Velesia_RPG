@@ -27,6 +27,7 @@ struct ActiveChunkTag {};
 
 struct Enemy {
     float hp = 100.0f;
+    float max_hp = 100.0f;
     float speed = 100.0f;
     float damage = 10.0f;
 };
