@@ -1,5 +1,14 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.15...3.29)
 project(rpg_engine VERSION 0.1.0)
+
+# Fix for new CMake versions complaining about Raylib's internal older CMake policies
+set(CMAKE_POLICY_DEFAULT_CMP0148 OLD)
+if(POLICY CMP0150)
+  cmake_policy(SET CMP0150 OLD)
+endif()
+
+# Crucial fix for "Compatibility with CMake < 3.5 has been removed" in nested dependencies
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
 
 # C++17 is required for pybind11 and good practices
 set(CMAKE_CXX_STANDARD 17)
@@ -52,6 +61,7 @@ set(SOURCES
     engine/graphics/camera.cpp
     engine/ecs/scene.cpp
     engine/assets/asset_manager.cpp
+    engine/assets/tilemap_loader.cpp
 )
 pybind11_add_module(engine ${SOURCES})
 

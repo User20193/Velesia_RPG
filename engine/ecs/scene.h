@@ -30,6 +30,10 @@ public:
     void update_active_chunks(float center_x, float center_y, float radius);
     std::vector<uint32_t> get_active_entities();
 
+    // Serialization
+    bool save_to_json(const std::string& filepath);
+    bool load_from_json(const std::string& filepath);
+
     entt::registry& get_registry() { return registry; }
 
 private:

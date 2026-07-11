@@ -2,6 +2,7 @@
 #include <pybind11/stl.h>
 #include "../core/engine.h"
 #include "../graphics/camera.h"
+#include "../assets/tilemap_loader.h"
 #include "raylib.h"
 
 namespace py = pybind11;
@@ -34,7 +35,12 @@ PYBIND11_MODULE(engine, m) {
         .def("add_enemy", &Scene::add_enemy, py::arg("entity"), py::arg("hp"), py::arg("speed"), py::arg("damage"), "Add or replace Enemy component")
         .def("has_enemy", &Scene::has_enemy, py::arg("entity"), "Check if entity has an Enemy component")
         .def("update_active_chunks", &Scene::update_active_chunks, py::arg("center_x"), py::arg("center_y"), py::arg("radius"), "Update which entities are active based on distance from center")
-        .def("get_active_entities", &Scene::get_active_entities, "Get a list of all currently active entities");
+        .def("get_active_entities", &Scene::get_active_entities, "Get a list of all currently active entities")
+        .def("load_tiled_json", [](Scene& self, const std::string& filepath) {
+            return TilemapLoader::load_tiled_json(filepath, self);
+        }, py::arg("filepath"), "Load a Tiled map in JSON format and spawn entities")
+        .def("save_to_json", &Scene::save_to_json, py::arg("filepath"), "Serialize the entire ECS Scene to a JSON file")
+        .def("load_from_json", &Scene::load_from_json, py::arg("filepath"), "Load and replace the ECS Scene from a JSON file");
 
     // Bind GameCamera
     py::class_<GameCamera>(m, "GameCamera")

@@ -1,5 +1,11 @@
 #include "scene.h"
 #include <cmath>
+#include <fstream>
+#include <iostream>
+#include <nlohmann/json.hpp>
+#include "raylib.h"
+
+using json = nlohmann::json;
 
 Scene::Scene() {
     for (int i = 0; i < 1000; ++i) {
@@ -96,4 +102,84 @@ std::vector<uint32_t> Scene::get_active_entities() {
         active_ents.push_back(static_cast<uint32_t>(entity));
     }
     return active_ents;
+}
+
+bool Scene::save_to_json(const std::string& filepath) {
+    try {
+        json out;
+        out["entities"] = json::array();
+
+        // Iterate over all entities that have a Transform2D (which is our base requirement for world objects)
+        auto view = registry.view<Transform2D>();
+        for (auto entity : view) {
+            json j_ent;
+            j_ent["id"] = static_cast<uint32_t>(entity);
+
+            auto& t = view.get<Transform2D>(entity);
+            j_ent["Transform2D"] = {{"x", t.x}, {"y", t.y}};
+
+            if (registry.all_of<Collider>(entity)) {
+                auto& c = registry.get<Collider>(entity);
+                j_ent["Collider"] = {{"width", c.width}, {"height", c.height}};
+            }
+
+            if (registry.all_of<Enemy>(entity)) {
+                auto& e = registry.get<Enemy>(entity);
+                j_ent["Enemy"] = {{"hp", e.hp}, {"speed", e.speed}, {"damage", e.damage}};
+            }
+
+            out["entities"].push_back(j_ent);
+        }
+
+        std::ofstream f(filepath);
+        f << std::setw(4) << out << std::endl;
+        TraceLog(LOG_INFO, "SCENE: Saved to %s", filepath.c_str());
+        return true;
+    } catch (const std::exception& e) {
+        TraceLog(LOG_ERROR, "SCENE: Failed to save %s: %s", filepath.c_str(), e.what());
+    }
+    return false;
+}
+
+bool Scene::load_from_json(const std::string& filepath) {
+    try {
+        std::ifstream f(filepath);
+        if (!f.is_open()) return false;
+
+        json data = json::parse(f);
+
+        // Clear current active non-pooled entities (reset scene)
+        registry.clear();
+        entity_pool.clear();
+
+        // Re-init pool
+        for (int i = 0; i < 1000; ++i) {
+            auto entity = registry.create();
+            entity_pool.push_back(static_cast<uint32_t>(entity));
+        }
+
+        if (data.contains("entities") && data["entities"].is_array()) {
+            for (const auto& j_ent : data["entities"]) {
+                uint32_t ent = get_pooled_entity();
+
+                if (j_ent.contains("Transform2D")) {
+                    add_transform(ent, j_ent["Transform2D"]["x"], j_ent["Transform2D"]["y"]);
+                }
+
+                if (j_ent.contains("Collider")) {
+                    add_collider(ent, j_ent["Collider"]["width"], j_ent["Collider"]["height"]);
+                }
+
+                if (j_ent.contains("Enemy")) {
+                    add_enemy(ent, j_ent["Enemy"]["hp"], j_ent["Enemy"]["speed"], j_ent["Enemy"]["damage"]);
+                }
+            }
+        }
+
+        TraceLog(LOG_INFO, "SCENE: Loaded from %s", filepath.c_str());
+        return true;
+    } catch (const std::exception& e) {
+        TraceLog(LOG_ERROR, "SCENE: Failed to load %s: %s", filepath.c_str(), e.what());
+    }
+    return false;
 }
