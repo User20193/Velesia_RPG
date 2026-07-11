@@ -56,15 +56,32 @@ private:
     std::vector<uint32_t> entity_pool;
 };
 
+#include "asset_manager.h"
+
 class TextureManager {
 public:
+    TextureManager() = default;
+
+    // Disable copying because of unique_ptr inside AssetManager
+    TextureManager(const TextureManager&) = delete;
+    TextureManager& operator=(const TextureManager&) = delete;
+
     ~TextureManager();
     void unload_all();
+
+    // Legacy support
     void load_texture(const std::string& name, const std::string& filepath);
     void draw_texture(const std::string& name, float x, float y);
     void draw_texture_rec(const std::string& name, float source_x, float source_y, float source_w, float source_h, float dest_x, float dest_y);
+
+    // New Advanced Asset System
+    void load_sprite_sheet(const std::string& name, const std::string& filepath);
+    void draw_sprite_frame(const std::string& name, int frame_index, float dest_x, float dest_y);
+
 private:
-    std::unordered_map<std::string, Texture2D> textures;
+    std::unordered_map<std::string, Texture2D> textures; // For legacy
+    std::unordered_map<std::string, SpriteSheet> sprite_sheets; // For new system
+    AssetManager asset_manager;
 };
 
 class GameCamera {

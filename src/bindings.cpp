@@ -14,7 +14,9 @@ PYBIND11_MODULE(engine, m) {
         .def("draw_texture", &TextureManager::draw_texture, "Draw a loaded texture")
         .def("draw_texture_rec", &TextureManager::draw_texture_rec,
             py::arg("name"), py::arg("source_x"), py::arg("source_y"), py::arg("source_w"), py::arg("source_h"),
-            py::arg("dest_x"), py::arg("dest_y"), "Draw a part of a texture");
+            py::arg("dest_x"), py::arg("dest_y"), "Draw a part of a texture")
+        .def("load_sprite_sheet", &TextureManager::load_sprite_sheet, py::arg("name"), py::arg("filepath"), "Load a sprite sheet using the intelligent AssetManager")
+        .def("draw_sprite_frame", &TextureManager::draw_sprite_frame, py::arg("name"), py::arg("frame_index"), py::arg("dest_x"), py::arg("dest_y"), "Draw a specific frame from a loaded sprite sheet");
 
     // Bind Scene (ECS)
     py::class_<Scene>(m, "Scene")

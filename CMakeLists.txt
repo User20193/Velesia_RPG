@@ -36,11 +36,19 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(entt)
 
-# 4. Create the Python module
-pybind11_add_module(engine src/bindings.cpp src/engine.cpp)
+# 4. Fetch nlohmann/json
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.11.3
+)
+FetchContent_MakeAvailable(nlohmann_json)
 
-# Link Raylib and EnTT to the Python module
-target_link_libraries(engine PRIVATE raylib EnTT::EnTT)
+# 5. Create the Python module
+pybind11_add_module(engine src/bindings.cpp src/engine.cpp src/asset_manager.cpp)
+
+# Link Raylib, EnTT, and json to the Python module
+target_link_libraries(engine PRIVATE raylib EnTT::EnTT nlohmann_json::nlohmann_json)
 
 # Include directories
 target_include_directories(engine PRIVATE src)

@@ -79,6 +79,11 @@ void TextureManager::unload_all() {
         UnloadTexture(pair.second);
     }
     textures.clear();
+
+    for (auto& pair : sprite_sheets) {
+        UnloadTexture(pair.second.texture);
+    }
+    sprite_sheets.clear();
 }
 
 void TextureManager::load_texture(const std::string& name, const std::string& filepath) {
@@ -94,6 +99,32 @@ void TextureManager::draw_texture(const std::string& name, float x, float y) {
         DrawTextureV(it->second, {x, y}, WHITE);
     } else {
         std::cerr << "Warning: Texture '" << name << "' not found!" << std::endl;
+    }
+}
+
+void TextureManager::load_sprite_sheet(const std::string& name, const std::string& filepath) {
+    if (sprite_sheets.find(name) == sprite_sheets.end()) {
+        SpriteSheet sheet = asset_manager.load_sprite_sheet(name, filepath);
+        if (sheet.is_valid) {
+            sprite_sheets[name] = sheet;
+        }
+    }
+}
+
+void TextureManager::draw_sprite_frame(const std::string& name, int frame_index, float dest_x, float dest_y) {
+    auto it = sprite_sheets.find(name);
+    if (it != sprite_sheets.end()) {
+        const SpriteSheet& sheet = it->second;
+        if (!sheet.frames.empty()) {
+            int safe_index = frame_index % sheet.frames.size();
+            const SpriteFrame& frame = sheet.frames[safe_index];
+
+            Rectangle source = { frame.x, frame.y, frame.w, frame.h };
+            Vector2 position = { dest_x, dest_y };
+            DrawTextureRec(sheet.texture, source, position, WHITE);
+        }
+    } else {
+        std::cerr << "Warning: SpriteSheet '" << name << "' not found!" << std::endl;
     }
 }
 
