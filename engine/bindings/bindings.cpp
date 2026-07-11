@@ -87,6 +87,9 @@ PYBIND11_MODULE(engine, m) {
         .def("draw_rectangle_lines", &Engine::draw_rectangle_lines, py::arg("x"), py::arg("y"), py::arg("width"), py::arg("height"), py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a") = 255, "Draw rectangle outlines")
         .def("draw_line", &Engine::draw_line, py::arg("startX"), py::arg("startY"), py::arg("endX"), py::arg("endY"), py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a") = 255, "Draw a line")
         .def("draw_text", &Engine::draw_text, py::arg("text"), py::arg("x"), py::arg("y"), py::arg("fontSize"), py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a") = 255, "Draw text")
+        .def("load_font", &Engine::load_font, py::arg("name"), py::arg("filepath"), py::arg("fontSize"), "Load a font from file")
+        .def("draw_text_ex", &Engine::draw_text_ex, py::arg("font_name"), py::arg("text"), py::arg("x"), py::arg("y"), py::arg("fontSize"), py::arg("spacing"), py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a") = 255, "Draw text using a loaded font")
+        .def("measure_text_ex", &Engine::measure_text_ex, py::arg("font_name"), py::arg("text"), py::arg("fontSize"), py::arg("spacing"), "Measure the width of text using a loaded font")
         .def("check_collision_recs", &Engine::check_collision_recs, py::arg("x1"), py::arg("y1"), py::arg("w1"), py::arg("h1"), py::arg("x2"), py::arg("y2"), py::arg("w2"), py::arg("h2"), "Check if two rectangles collide")
         .def("get_texture_manager", &Engine::get_texture_manager, py::return_value_policy::reference, "Get the texture manager")
         .def("get_scene", &Engine::get_scene, py::return_value_policy::reference, "Get the ECS Scene manager");

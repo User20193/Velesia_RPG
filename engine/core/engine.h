@@ -33,6 +33,11 @@ public:
     void draw_line(int startPosX, int startPosY, int endPosX, int endPosY, int r, int g, int b, int a = 255);
     void draw_text(const std::string& text, int x, int y, int fontSize, int r, int g, int b, int a = 255);
 
+    // Fonts
+    void load_font(const std::string& name, const std::string& filepath, int fontSize);
+    void draw_text_ex(const std::string& font_name, const std::string& text, float x, float y, float fontSize, float spacing, int r, int g, int b, int a = 255);
+    float measure_text_ex(const std::string& font_name, const std::string& text, float fontSize, float spacing);
+
     // Physics / Collision
     bool check_collision_recs(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2);
 
@@ -42,4 +47,5 @@ public:
 private:
     TextureManager texture_manager;
     Scene scene;
+    std::unordered_map<std::string, Font> fonts;
 };

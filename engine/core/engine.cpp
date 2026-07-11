@@ -7,6 +7,10 @@ Engine::Engine(int width, int height, const std::string& title) {
 
 Engine::~Engine() {
     texture_manager.unload_all();
+    for (auto& pair : fonts) {
+        UnloadFont(pair.second);
+    }
+    fonts.clear();
     CloseWindow();
 }
 
@@ -72,6 +76,38 @@ void Engine::draw_line(int startPosX, int startPosY, int endPosX, int endPosY, i
 
 void Engine::draw_text(const std::string& text, int x, int y, int fontSize, int r, int g, int b, int a) {
     DrawText(text.c_str(), x, y, fontSize, {(unsigned char)r, (unsigned char)g, (unsigned char)b, (unsigned char)a});
+}
+
+void Engine::load_font(const std::string& name, const std::string& filepath, int fontSize) {
+    if (fonts.find(name) == fonts.end()) {
+        // Load font with characters to support Russian text (Cyrillic)
+        // 0x0400 - 0x04FF (Cyrillic) and 0x0020 - 0x007E (Basic Latin)
+        int fontChars[512];
+        int count = 0;
+        for (int i = 0x0020; i <= 0x007E; i++) fontChars[count++] = i; // Basic Latin
+        for (int i = 0x0400; i <= 0x045F; i++) fontChars[count++] = i; // Cyrillic
+
+        Font font = LoadFontEx(filepath.c_str(), fontSize, fontChars, count);
+        fonts[name] = font;
+    }
+}
+
+void Engine::draw_text_ex(const std::string& font_name, const std::string& text, float x, float y, float fontSize, float spacing, int r, int g, int b, int a) {
+    if (fonts.find(font_name) != fonts.end()) {
+        Vector2 pos = { x, y };
+        DrawTextEx(fonts[font_name], text.c_str(), pos, fontSize, spacing, {(unsigned char)r, (unsigned char)g, (unsigned char)b, (unsigned char)a});
+    } else {
+        // Fallback
+        DrawText(text.c_str(), (int)x, (int)y, (int)fontSize, {(unsigned char)r, (unsigned char)g, (unsigned char)b, (unsigned char)a});
+    }
+}
+
+float Engine::measure_text_ex(const std::string& font_name, const std::string& text, float fontSize, float spacing) {
+    if (fonts.find(font_name) != fonts.end()) {
+        Vector2 size = MeasureTextEx(fonts[font_name], text.c_str(), fontSize, spacing);
+        return size.x;
+    }
+    return (float)MeasureText(text.c_str(), (int)fontSize);
 }
 
 bool Engine::check_collision_recs(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) {

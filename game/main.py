@@ -44,13 +44,18 @@ def main():
 
     # 1. Initialize the Engine
     # Create an 800x600 window with a title
-    eng = engine.Engine(800, 600, "My 2D RPG (Python + C++)")
+    eng = engine.Engine(800, 600, "Velesia RPG")
 
     # 2. Setup Texture Manager
     tex_mgr = eng.get_texture_manager()
     tex_mgr.load_texture("bg_grass", grass_path)
     tex_mgr.load_texture("obs_stone", stone_path)
     tex_mgr.load_texture("obs_wood", wood_path)
+    tex_mgr.load_texture("menu_bg", "game/assets/menu_bg.png")
+
+    eng.load_font("title", "game/assets/title_font.ttf", 64)
+    eng.load_font("button", "game/assets/button_font.ttf", 32)
+    eng.load_font("button_hover", "game/assets/button_font.ttf", 36)
 
     # 3. Setup Camera
     camera = engine.GameCamera()
@@ -60,46 +65,86 @@ def main():
     # 4. Setup ECS (Scene)
     scene = eng.get_scene()
 
+    # --- Game State ---
+    class GameState:
+        MENU = 0
+        PLAYING = 1
+        SETTINGS = 2
+        SAVES = 3
+        GAME_OVER = 4
+
+    current_state = GameState.MENU
+
+    # Button helper
+    def draw_button(text, x, y, width, height, is_hovered):
+        if is_hovered:
+            eng.draw_rectangle(int(x), int(y), int(width), int(height), 80, 80, 80, 200)
+            text_width = eng.measure_text_ex("button_hover", text, 36, 1.0)
+            text_x = x + (width - text_width) / 2
+            eng.draw_text_ex("button_hover", text, text_x, y + (height - 36) / 2, 36, 1.0, 255, 255, 255)
+        else:
+            eng.draw_rectangle(int(x), int(y), int(width), int(height), 50, 50, 50, 200)
+            eng.draw_rectangle_lines(int(x), int(y), int(width), int(height), 100, 100, 100)
+            text_width = eng.measure_text_ex("button", text, 32, 1.0)
+            text_x = x + (width - text_width) / 2
+            eng.draw_text_ex("button", text, text_x, y + (height - 32) / 2, 32, 1.0, 200, 200, 200)
+
     # --- Create Player Entity ---
     player_entity = scene.create_entity()
-    scene.add_transform(player_entity, 400.0, 300.0)
-    scene.add_collider(player_entity, 32.0, 32.0)
+
     player_speed = 300.0 # Pixels per second
     player_size = 32.0
-
-    # Player Stats
-    player_hp = 100.0
     player_max_hp = 100.0
     player_damage = 25.0
-    player_attack_cooldown = 0.0
 
-    # Animation state (Python side for now, can be moved to C++ component later)
+    # Global variables to reset
+    player_hp = 100.0
+    player_attack_cooldown = 0.0
     current_frame = 0
     frame_timer = 0.0
     frame_delay = 0.15 # seconds per frame
 
     import random
 
-    # --- Create Obstacles Entities (Massive World for Chunk Testing) ---
-    print("Generating world...")
-    for _ in range(500):
-        obs_ent = scene.get_pooled_entity()
-        ox = random.uniform(-2000.0, 2000.0)
-        oy = random.uniform(-2000.0, 2000.0)
-        # We'll use width to determine texture later
-        ow = random.choice([32.0, 64.0])
-        oh = ow # keep them square for simplicity
-        scene.add_transform(obs_ent, ox, oy)
-        scene.add_collider(obs_ent, ow, oh)
+    world_entities = []
 
-    # --- Create Enemies ---
-    for _ in range(50):
-        enemy_ent = scene.get_pooled_entity()
-        ex = random.uniform(-1000.0, 1000.0)
-        ey = random.uniform(-1000.0, 1000.0)
-        scene.add_transform(enemy_ent, ex, ey)
-        scene.add_collider(enemy_ent, 32.0, 32.0)
-        scene.add_enemy(enemy_ent, 50.0, 150.0, 10.0) # hp, speed, damage
+    def reset_game():
+        nonlocal player_hp, player_attack_cooldown
+        player_hp = player_max_hp
+        player_attack_cooldown = 0.0
+
+        # Reset Player
+        scene.add_transform(player_entity, 400.0, 300.0)
+        scene.add_collider(player_entity, player_size, player_size)
+
+        # Clear old entities
+        for ent in world_entities:
+            scene.return_pooled_entity(ent)
+        world_entities.clear()
+
+        # --- Create Obstacles Entities ---
+        for _ in range(500):
+            obs_ent = scene.get_pooled_entity()
+            ox = random.uniform(-2000.0, 2000.0)
+            oy = random.uniform(-2000.0, 2000.0)
+            ow = random.choice([32.0, 64.0])
+            oh = ow
+            scene.add_transform(obs_ent, ox, oy)
+            scene.add_collider(obs_ent, ow, oh)
+            world_entities.append(obs_ent)
+
+        # --- Create Enemies ---
+        for _ in range(50):
+            enemy_ent = scene.get_pooled_entity()
+            ex = random.uniform(-1000.0, 1000.0)
+            ey = random.uniform(-1000.0, 1000.0)
+            scene.add_transform(enemy_ent, ex, ey)
+            scene.add_collider(enemy_ent, 32.0, 32.0)
+            scene.add_enemy(enemy_ent, 50.0, 150.0, 10.0)
+            world_entities.append(enemy_ent)
+
+    # Initialize first game
+    reset_game()
 
     # Debug state
     debug_mode = False
@@ -112,6 +157,102 @@ def main():
     while eng.is_running():
         # --- UPDATE ---
         dt = eng.get_delta_time()
+
+        mouse_screen_x = eng.get_mouse_x()
+        mouse_screen_y = eng.get_mouse_y()
+        is_clicked = eng.is_mouse_button_pressed(engine.MouseButtons.MOUSE_BUTTON_LEFT)
+
+        # ==========================================
+        #                 MAIN MENU
+        # ==========================================
+        if current_state == GameState.MENU:
+            eng.begin_drawing()
+            eng.clear_background(0, 0, 0)
+
+            # Draw Background
+            tex_mgr.draw_texture("menu_bg", 0, 0)
+
+            # Draw Title
+            title_text = "Velesia RPG"
+            title_width = eng.measure_text_ex("title", title_text, 64, 2.0)
+            eng.draw_text_ex("title", title_text, (800 - title_width) / 2, 100, 64, 2.0, 220, 20, 20)
+
+            # Buttons
+            btn_w, btn_h = 250, 50
+            btn_x = (800 - btn_w) / 2
+
+            buttons = [
+                ("Играть", btn_x, 250, GameState.PLAYING),
+                ("Настройки", btn_x, 320, GameState.SETTINGS),
+                ("Сохранения", btn_x, 390, GameState.SAVES),
+                ("Выход", btn_x, 460, -1)
+            ]
+
+            for text, bx, by, action in buttons:
+                hover = eng.check_collision_recs(mouse_screen_x, mouse_screen_y, 1, 1, bx, by, btn_w, btn_h)
+                draw_button(text, bx, by, btn_w, btn_h, hover)
+
+                if hover and is_clicked:
+                    if action == -1:
+                        return # Exit the game
+                    elif action == GameState.PLAYING:
+                        reset_game()
+                        current_state = GameState.PLAYING
+                    else:
+                        current_state = action
+
+            eng.end_drawing()
+            continue
+
+        # ==========================================
+        #             SETTINGS & SAVES
+        # ==========================================
+        if current_state == GameState.SETTINGS or current_state == GameState.SAVES:
+            eng.begin_drawing()
+            eng.clear_background(30, 30, 30)
+
+            title = "Настройки" if current_state == GameState.SETTINGS else "Сохранения"
+            title_width = eng.measure_text_ex("title", title, 48, 2.0)
+            eng.draw_text_ex("title", title, (800 - title_width) / 2, 100, 48, 2.0, 255, 255, 255)
+
+            # Back Button
+            btn_w, btn_h = 200, 50
+            bx, by = (800 - btn_w) / 2, 450
+            hover = eng.check_collision_recs(mouse_screen_x, mouse_screen_y, 1, 1, bx, by, btn_w, btn_h)
+            draw_button("Назад", bx, by, btn_w, btn_h, hover)
+
+            if hover and is_clicked:
+                current_state = GameState.MENU
+
+            eng.end_drawing()
+            continue
+
+        # ==========================================
+        #                 GAME OVER
+        # ==========================================
+        if current_state == GameState.GAME_OVER:
+            eng.begin_drawing()
+            eng.clear_background(20, 0, 0)
+
+            title = "ВЫ ПОГИБЛИ"
+            title_width = eng.measure_text_ex("title", title, 64, 2.0)
+            eng.draw_text_ex("title", title, (800 - title_width) / 2, 200, 64, 2.0, 255, 50, 50)
+
+            # Main Menu Button
+            btn_w, btn_h = 300, 50
+            bx, by = (800 - btn_w) / 2, 350
+            hover = eng.check_collision_recs(mouse_screen_x, mouse_screen_y, 1, 1, bx, by, btn_w, btn_h)
+            draw_button("В Главное Меню", bx, by, btn_w, btn_h, hover)
+
+            if hover and is_clicked:
+                current_state = GameState.MENU
+
+            eng.end_drawing()
+            continue
+
+        # ==========================================
+        #                 PLAYING
+        # ==========================================
 
         # Toggle Debug
         if eng.is_key_pressed(engine.Keys.KEY_F3):
@@ -268,7 +409,9 @@ def main():
                 # Enemy damaging player logic
                 if eng.check_collision_recs(px, py, player_size, player_size, ex, ey, ew, eh):
                     player_hp -= 10.0 * dt # DPS
-                    if player_hp < 0: player_hp = 0
+                    if player_hp <= 0:
+                        player_hp = 0
+                        current_state = GameState.GAME_OVER
 
             elif scene.has_collider(ent):
                 ox, oy = scene.get_transform(ent)
@@ -312,7 +455,7 @@ def main():
         eng.draw_rectangle(20, 20, 200, 20, 100, 100, 100) # BG
         hp_perc = player_hp / player_max_hp
         eng.draw_rectangle(20, 20, int(200 * hp_perc), 20, 255, 50, 50) # FG
-        eng.draw_text(f"HP: {int(player_hp)}/{int(player_max_hp)}", 25, 22, 16, 255, 255, 255)
+        eng.draw_text_ex("button", f"HP: {int(player_hp)} / {int(player_max_hp)}", 25, 22, 16, 1.0, 255, 255, 255)
 
         if debug_mode:
             fps = eng.get_fps()
