@@ -20,7 +20,12 @@ if %ERRORLEVEL% == 0 (
     echo GCC / MinGW ^(WinLibs^) detected! Using MinGW Makefiles.
     echo.
     echo [1/3] Configuring CMake...
-    cmake -B build -G "MinGW Makefiles"
+
+    :: Get the exact path of the active Python executable
+    for /f "delims=" %%I in ('python -c "import sys; print(sys.executable)"') do set "PYTHON_EXE=%%I"
+    echo Using Python executable: !PYTHON_EXE!
+
+    cmake -B build -G "MinGW Makefiles" -DPYTHON_EXECUTABLE="!PYTHON_EXE!"
 ) else (
     echo GCC not found. Attempting to find Visual Studio...
 
@@ -49,10 +54,15 @@ if %ERRORLEVEL% == 0 (
 
     echo.
     echo [1/3] Configuring CMake...
-    cmake -B build -G "Visual Studio 17 2022" -A x64
+
+    :: Get the exact path of the active Python executable
+    for /f "delims=" %%I in ('python -c "import sys; print(sys.executable)"') do set "PYTHON_EXE=%%I"
+    echo Using Python executable: !PYTHON_EXE!
+
+    cmake -B build -G "Visual Studio 17 2022" -A x64 -DPYTHON_EXECUTABLE="!PYTHON_EXE!"
     if !ERRORLEVEL! neq 0 (
         echo Attempting fallback to older Visual Studio generator...
-        cmake -B build
+        cmake -B build -DPYTHON_EXECUTABLE="!PYTHON_EXE!"
     )
 )
 if %ERRORLEVEL% neq 0 (

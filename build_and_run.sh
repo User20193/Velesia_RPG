@@ -7,7 +7,9 @@ echo "========================================="
 
 echo ""
 echo "[1/3] Configuring CMake..."
-cmake -B build
+PYTHON_EXE=$(python3 -c "import sys; print(sys.executable)")
+echo "Using Python executable: $PYTHON_EXE"
+cmake -B build -DPYTHON_EXECUTABLE="$PYTHON_EXE"
 
 echo ""
 echo "[2/3] Compiling C++ Engine..."
