@@ -30,6 +30,41 @@ void TextureManager::draw_texture(const std::string& name, float x, float y) {
     }
 }
 
+// --- GameCamera ---
+
+GameCamera::GameCamera() {
+    camera = { 0 };
+    camera.offset = { 0.0f, 0.0f };
+    camera.target = { 0.0f, 0.0f };
+    camera.rotation = 0.0f;
+    camera.zoom = 1.0f;
+}
+
+void GameCamera::set_target(float x, float y) {
+    camera.target = { x, y };
+}
+
+void GameCamera::set_offset(float x, float y) {
+    camera.offset = { x, y };
+}
+
+void GameCamera::set_zoom(float zoom) {
+    camera.zoom = zoom;
+}
+
+void GameCamera::begin_mode() {
+    BeginMode2D(camera);
+}
+
+void GameCamera::end_mode() {
+    EndMode2D();
+}
+
+std::pair<float, float> GameCamera::get_screen_to_world(float screen_x, float screen_y) const {
+    Vector2 worldPos = GetScreenToWorld2D({screen_x, screen_y}, camera);
+    return {worldPos.x, worldPos.y};
+}
+
 // --- Engine ---
 
 Engine::Engine(int width, int height, const std::string& title) {
@@ -66,10 +101,30 @@ bool Engine::is_key_pressed(int key) {
     return IsKeyPressed(key);
 }
 
+bool Engine::is_mouse_button_down(int button) {
+    return IsMouseButtonDown(button);
+}
+
+bool Engine::is_mouse_button_pressed(int button) {
+    return IsMouseButtonPressed(button);
+}
+
+float Engine::get_mouse_x() {
+    return (float)GetMouseX();
+}
+
+float Engine::get_mouse_y() {
+    return (float)GetMouseY();
+}
+
 float Engine::get_delta_time() {
     return GetFrameTime();
 }
 
 void Engine::draw_rectangle(int x, int y, int width, int height, int r, int g, int b, int a) {
     DrawRectangle(x, y, width, height, {(unsigned char)r, (unsigned char)g, (unsigned char)b, (unsigned char)a});
+}
+
+void Engine::draw_line(int startPosX, int startPosY, int endPosX, int endPosY, int r, int g, int b, int a) {
+    DrawLine(startPosX, startPosY, endPosX, endPosY, {(unsigned char)r, (unsigned char)g, (unsigned char)b, (unsigned char)a});
 }
