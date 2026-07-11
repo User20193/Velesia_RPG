@@ -68,6 +68,12 @@ pybind11_add_module(engine ${SOURCES})
 # Link Raylib, EnTT, and json to the Python module
 target_link_libraries(engine PRIVATE raylib EnTT::EnTT nlohmann_json::nlohmann_json)
 
+# If using GCC/MinGW on Windows, statically link libstdc++ and libgcc
+# to avoid "DLL load failed" errors when importing the module in Python.
+if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    target_link_options(engine PRIVATE -static -static-libgcc -static-libstdc++)
+endif()
+
 # Include directories
 target_include_directories(engine PRIVATE engine)
 
