@@ -16,6 +16,18 @@ PYBIND11_MODULE(engine, m) {
             py::arg("name"), py::arg("source_x"), py::arg("source_y"), py::arg("source_w"), py::arg("source_h"),
             py::arg("dest_x"), py::arg("dest_y"), "Draw a part of a texture");
 
+    // Bind Scene (ECS)
+    py::class_<Scene>(m, "Scene")
+        .def("create_entity", &Scene::create_entity, "Create a raw new entity")
+        .def("destroy_entity", &Scene::destroy_entity, py::arg("entity"), "Destroy an entity")
+        .def("get_pooled_entity", &Scene::get_pooled_entity, "Get an entity from the pre-allocated pool")
+        .def("return_pooled_entity", &Scene::return_pooled_entity, py::arg("entity"), "Return an entity back to the pool")
+        .def("add_transform", &Scene::add_transform, py::arg("entity"), py::arg("x"), py::arg("y"), "Add or replace Transform2D component")
+        .def("set_transform", &Scene::set_transform, py::arg("entity"), py::arg("x"), py::arg("y"), "Update existing Transform2D component")
+        .def("get_transform", &Scene::get_transform, py::arg("entity"), "Get Transform2D component as (x, y) tuple")
+        .def("add_collider", &Scene::add_collider, py::arg("entity"), py::arg("width"), py::arg("height"), "Add or replace Collider component")
+        .def("has_collider", &Scene::has_collider, py::arg("entity"), "Check if entity has a Collider");
+
     // Bind GameCamera
     py::class_<GameCamera>(m, "GameCamera")
         .def(py::init<>(), "Create a new 2D Camera")
@@ -46,7 +58,8 @@ PYBIND11_MODULE(engine, m) {
         .def("draw_line", &Engine::draw_line, py::arg("startX"), py::arg("startY"), py::arg("endX"), py::arg("endY"), py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a") = 255, "Draw a line")
         .def("draw_text", &Engine::draw_text, py::arg("text"), py::arg("x"), py::arg("y"), py::arg("fontSize"), py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a") = 255, "Draw text")
         .def("check_collision_recs", &Engine::check_collision_recs, py::arg("x1"), py::arg("y1"), py::arg("w1"), py::arg("h1"), py::arg("x2"), py::arg("y2"), py::arg("w2"), py::arg("h2"), "Check if two rectangles collide")
-        .def("get_texture_manager", &Engine::get_texture_manager, py::return_value_policy::reference, "Get the texture manager");
+        .def("get_texture_manager", &Engine::get_texture_manager, py::return_value_policy::reference, "Get the texture manager")
+        .def("get_scene", &Engine::get_scene, py::return_value_policy::reference, "Get the ECS Scene manager");
 
     // Keyboard keys enum
     py::enum_<KeyboardKey>(m, "Keys")

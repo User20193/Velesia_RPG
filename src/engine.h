@@ -1,7 +1,60 @@
 #pragma once
 #include <string>
 #include <unordered_map>
+#include <cstdint>
 #include "raylib.h"
+#include <entt/entt.hpp>
+
+// --- ECS Components ---
+struct Transform2D {
+    float x = 0.0f;
+    float y = 0.0f;
+};
+
+struct Collider {
+    float width = 0.0f;
+    float height = 0.0f;
+};
+
+struct Sprite {
+    std::string texture_name;
+    int current_frame = 0;
+    int max_frames = 1;
+    float frame_timer = 0.0f;
+    float frame_delay = 0.1f;
+    float size_x = 32.0f;
+    float size_y = 32.0f;
+    float r = 255.0f, g = 255.0f, b = 255.0f, a = 255.0f;
+    bool is_visible = true;
+};
+
+class Scene {
+public:
+    Scene();
+    ~Scene();
+
+    // ECS Basics
+    uint32_t create_entity();
+    void destroy_entity(uint32_t entity);
+
+    // Components
+    void add_transform(uint32_t entity, float x, float y);
+    void set_transform(uint32_t entity, float x, float y);
+    std::pair<float, float> get_transform(uint32_t entity);
+
+    void add_collider(uint32_t entity, float width, float height);
+    bool has_collider(uint32_t entity);
+
+    // Simple pool logic for Python
+    uint32_t get_pooled_entity();
+    void return_pooled_entity(uint32_t entity);
+
+    entt::registry& get_registry() { return registry; }
+
+private:
+    entt::registry registry;
+    std::vector<uint32_t> entity_pool;
+};
 
 class TextureManager {
 public:
@@ -65,7 +118,9 @@ public:
     bool check_collision_recs(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2);
 
     TextureManager& get_texture_manager() { return texture_manager; }
+    Scene& get_scene() { return scene; }
 
 private:
     TextureManager texture_manager;
+    Scene scene;
 };

@@ -28,11 +28,19 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(pybind11)
 
-# 3. Create the Python module
+# 3. Fetch EnTT
+FetchContent_Declare(
+    entt
+    GIT_REPOSITORY https://github.com/skypjack/entt.git
+    GIT_TAG v3.13.0
+)
+FetchContent_MakeAvailable(entt)
+
+# 4. Create the Python module
 pybind11_add_module(engine src/bindings.cpp src/engine.cpp)
 
-# Link Raylib to the Python module
-target_link_libraries(engine PRIVATE raylib)
+# Link Raylib and EnTT to the Python module
+target_link_libraries(engine PRIVATE raylib EnTT::EnTT)
 
 # Include directories
 target_include_directories(engine PRIVATE src)

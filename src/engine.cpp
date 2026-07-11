@@ -1,6 +1,73 @@
 #include "engine.h"
 #include <iostream>
 
+// --- Scene (ECS) ---
+Scene::Scene() {
+    // Pre-allocate a pool of 1000 entities
+    for (int i = 0; i < 1000; ++i) {
+        auto entity = registry.create();
+        entity_pool.push_back(static_cast<uint32_t>(entity));
+    }
+}
+
+Scene::~Scene() {
+    registry.clear();
+}
+
+uint32_t Scene::create_entity() {
+    return static_cast<uint32_t>(registry.create());
+}
+
+void Scene::destroy_entity(uint32_t entity) {
+    registry.destroy(static_cast<entt::entity>(entity));
+}
+
+void Scene::add_transform(uint32_t entity, float x, float y) {
+    registry.emplace_or_replace<Transform2D>(static_cast<entt::entity>(entity), x, y);
+}
+
+void Scene::set_transform(uint32_t entity, float x, float y) {
+    auto& t = registry.get<Transform2D>(static_cast<entt::entity>(entity));
+    t.x = x;
+    t.y = y;
+}
+
+std::pair<float, float> Scene::get_transform(uint32_t entity) {
+    if(registry.all_of<Transform2D>(static_cast<entt::entity>(entity))) {
+        auto& t = registry.get<Transform2D>(static_cast<entt::entity>(entity));
+        return {t.x, t.y};
+    }
+    return {0.0f, 0.0f};
+}
+
+void Scene::add_collider(uint32_t entity, float width, float height) {
+    registry.emplace_or_replace<Collider>(static_cast<entt::entity>(entity), width, height);
+}
+
+bool Scene::has_collider(uint32_t entity) {
+    return registry.all_of<Collider>(static_cast<entt::entity>(entity));
+}
+
+uint32_t Scene::get_pooled_entity() {
+    if (!entity_pool.empty()) {
+        uint32_t ent = entity_pool.back();
+        entity_pool.pop_back();
+        return ent;
+    }
+    // If pool is empty, create a new one
+    return create_entity();
+}
+
+void Scene::return_pooled_entity(uint32_t entity) {
+    // Destroy entity entirely (EnTT manages recycling entity IDs internally)
+    // We recreate it when needed from the pool instead of clearing components
+    auto entt_id = static_cast<entt::entity>(entity);
+    registry.destroy(entt_id);
+    // Actually, to simulate pooling properly with EnTT without remove_all (which was removed in v3),
+    // we just let EnTT handle the ID recycle implicitly via destroy, and we push a new ID to the pool wrapper
+    entity_pool.push_back(static_cast<uint32_t>(registry.create()));
+}
+
 // --- TextureManager ---
 
 TextureManager::~TextureManager() {

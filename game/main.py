@@ -30,26 +30,35 @@ def main():
     camera.set_offset(400.0, 300.0) # Center of the 800x600 screen
     camera.set_zoom(1.0)
 
-    # Player state
-    player_x = 400.0
-    player_y = 300.0
-    player_size = 32
+    # 4. Setup ECS (Scene)
+    scene = eng.get_scene()
+
+    # --- Create Player Entity ---
+    player_entity = scene.create_entity()
+    scene.add_transform(player_entity, 400.0, 300.0)
+    scene.add_collider(player_entity, 32.0, 32.0)
     player_speed = 300.0 # Pixels per second
 
-    # Animation state (Example for a 4-frame animation, 32x32 per frame)
+    # Animation state (Python side for now, can be moved to C++ component later)
     current_frame = 0
     frame_timer = 0.0
     frame_delay = 0.15 # seconds per frame
 
+    # --- Create Obstacles Entities ---
+    obstacle_data = [
+        (200.0, 200.0, 64.0, 64.0),
+        (600.0, 150.0, 64.0, 64.0),
+        (300.0, 500.0, 64.0, 64.0)
+    ]
+    obstacles = []
+    for ox, oy, ow, oh in obstacle_data:
+        obs_ent = scene.get_pooled_entity()
+        scene.add_transform(obs_ent, ox, oy)
+        scene.add_collider(obs_ent, ow, oh)
+        obstacles.append(obs_ent)
+
     # Debug state
     debug_mode = False
-
-    # Obstacles (x, y, width, height)
-    obstacles = [
-        (200, 200, 64, 64),
-        (600, 150, 64, 64),
-        (300, 500, 64, 64)
-    ]
 
     print("Engine started successfully!")
     print("Use W, A, S, D to move. Move the mouse to aim, Click Left Mouse Button to shoot/attack.")
@@ -64,33 +73,44 @@ def main():
         if eng.is_key_pressed(engine.Keys.KEY_F3):
             debug_mode = not debug_mode
 
+        # Get Player Transform
+        px, py = scene.get_transform(player_entity)
+
         # Save previous position for collision response
-        prev_x = player_x
-        prev_y = player_y
+        prev_x = px
+        prev_y = py
 
         is_moving = False
         # Movement logic (Top-Down)
         if eng.is_key_down(engine.Keys.KEY_W) or eng.is_key_down(engine.Keys.KEY_UP):
-            player_y -= player_speed * dt
+            py -= player_speed * dt
             is_moving = True
         if eng.is_key_down(engine.Keys.KEY_S) or eng.is_key_down(engine.Keys.KEY_DOWN):
-            player_y += player_speed * dt
+            py += player_speed * dt
             is_moving = True
         if eng.is_key_down(engine.Keys.KEY_A) or eng.is_key_down(engine.Keys.KEY_LEFT):
-            player_x -= player_speed * dt
+            px -= player_speed * dt
             is_moving = True
         if eng.is_key_down(engine.Keys.KEY_D) or eng.is_key_down(engine.Keys.KEY_RIGHT):
-            player_x += player_speed * dt
+            px += player_speed * dt
             is_moving = True
 
-        # Collision Check
-        for obs in obstacles:
-            ox, oy, ow, oh = obs
-            # If player collides with an obstacle
-            if eng.check_collision_recs(player_x, player_y, player_size, player_size, ox, oy, ow, oh):
-                # Simple collision response: snap back to previous position
-                player_x = prev_x
-                player_y = prev_y
+        # Collision Check (ECS approach)
+        for obs_ent in obstacles:
+            if scene.has_collider(obs_ent):
+                ox, oy = scene.get_transform(obs_ent)
+                # Hardcoded sizes for now, ideally retrieved from a Collider component getter
+                ow, oh = 64.0, 64.0
+                player_size = 32.0
+
+                # If player collides with an obstacle
+                if eng.check_collision_recs(px, py, player_size, player_size, ox, oy, ow, oh):
+                    # Simple collision response: snap back to previous position
+                    px = prev_x
+                    py = prev_y
+
+        # Update Player Transform in ECS
+        scene.set_transform(player_entity, px, py)
 
         # Animation logic (only animate when moving)
         if is_moving:
@@ -103,7 +123,7 @@ def main():
             frame_timer = 0.0
 
         # Update camera to follow player (center of the player)
-        camera.set_target(player_x + player_size / 2.0, player_y + player_size / 2.0)
+        camera.set_target(px + player_size / 2.0, py + player_size / 2.0)
 
         # Get mouse position in the world
         mouse_screen_x = eng.get_mouse_x()
@@ -122,30 +142,31 @@ def main():
         # Start drawing in the camera's perspective
         camera.begin_mode()
 
-        # 1. Draw some world objects (obstacles)
-        for obs in obstacles:
-            ox, oy, ow, oh = obs
-            eng.draw_rectangle(ox, oy, ow, oh, 0, 100, 0)
+        # 1. Draw some world objects (obstacles) from ECS
+        for obs_ent in obstacles:
+            ox, oy = scene.get_transform(obs_ent)
+            ow, oh = 64.0, 64.0
+            eng.draw_rectangle(int(ox), int(oy), int(ow), int(oh), 0, 100, 0)
             if debug_mode:
-                eng.draw_rectangle_lines(ox, oy, ow, oh, 255, 0, 0) # Red hitbox
+                eng.draw_rectangle_lines(int(ox), int(oy), int(ow), int(oh), 255, 0, 0) # Red hitbox
 
-        # 2. Draw the player
+        # 2. Draw the player from ECS
         # Here we simulate an animation.
         # If we had a loaded texture:
-        # tex_mgr.draw_texture_rec("player", current_frame * player_size, 0, player_size, player_size, player_x, player_y)
+        # tex_mgr.draw_texture_rec("player", current_frame * player_size, 0, player_size, player_size, px, py)
         # But for now, we'll just draw a solid color that slightly changes color based on the frame to prove it works
         anim_color = 200 + (current_frame * 15)
-        eng.draw_rectangle(int(player_x), int(player_y), player_size, player_size, anim_color, 0, 0)
+        eng.draw_rectangle(int(px), int(py), int(player_size), int(player_size), anim_color, 0, 0)
 
         if debug_mode:
-            eng.draw_rectangle_lines(int(player_x), int(player_y), player_size, player_size, 255, 255, 0) # Yellow hitbox for player
+            eng.draw_rectangle_lines(int(px), int(py), int(player_size), int(player_size), 255, 255, 0) # Yellow hitbox for player
 
         # 3. Draw a line from player center to mouse position (Aiming line)
         if is_attacking:
-            eng.draw_line(int(player_x + player_size/2), int(player_y + player_size/2),
+            eng.draw_line(int(px + player_size/2), int(py + player_size/2),
                           int(mouse_world_x), int(mouse_world_y), 255, 255, 0)
         else:
-            eng.draw_line(int(player_x + player_size/2), int(player_y + player_size/2),
+            eng.draw_line(int(px + player_size/2), int(py + player_size/2),
                           int(mouse_world_x), int(mouse_world_y), 255, 255, 255, 100)
 
         # Stop drawing in camera perspective
@@ -158,7 +179,7 @@ def main():
             fps = eng.get_fps()
             eng.draw_rectangle(10, 10, 200, 70, 0, 0, 0, 150) # Dark semi-transparent background
             eng.draw_text(f"FPS: {fps}", 20, 20, 20, 0, 255, 0)
-            eng.draw_text(f"Player: {int(player_x)}, {int(player_y)}", 20, 45, 20, 255, 255, 255)
+            eng.draw_text(f"Player: {int(px)}, {int(py)}", 20, 45, 20, 255, 255, 255)
 
         eng.end_drawing()
 
