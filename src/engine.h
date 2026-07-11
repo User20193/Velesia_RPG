@@ -28,6 +28,15 @@ struct Sprite {
     bool is_visible = true;
 };
 
+// Tag component for active chunks
+struct ActiveChunkTag {};
+
+struct Enemy {
+    float hp = 100.0f;
+    float speed = 100.0f;
+    float damage = 10.0f;
+};
+
 class Scene {
 public:
     Scene();
@@ -44,10 +53,18 @@ public:
 
     void add_collider(uint32_t entity, float width, float height);
     bool has_collider(uint32_t entity);
+    std::pair<float, float> get_collider(uint32_t entity);
+
+    void add_enemy(uint32_t entity, float hp, float speed, float damage);
+    bool has_enemy(uint32_t entity);
 
     // Simple pool logic for Python
     uint32_t get_pooled_entity();
     void return_pooled_entity(uint32_t entity);
+
+    // Chunking System
+    void update_active_chunks(float center_x, float center_y, float radius);
+    std::vector<uint32_t> get_active_entities();
 
     entt::registry& get_registry() { return registry; }
 

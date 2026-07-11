@@ -38,24 +38,34 @@ def main():
     scene.add_transform(player_entity, 400.0, 300.0)
     scene.add_collider(player_entity, 32.0, 32.0)
     player_speed = 300.0 # Pixels per second
+    player_size = 32.0
 
     # Animation state (Python side for now, can be moved to C++ component later)
     current_frame = 0
     frame_timer = 0.0
     frame_delay = 0.15 # seconds per frame
 
-    # --- Create Obstacles Entities ---
-    obstacle_data = [
-        (200.0, 200.0, 64.0, 64.0),
-        (600.0, 150.0, 64.0, 64.0),
-        (300.0, 500.0, 64.0, 64.0)
-    ]
-    obstacles = []
-    for ox, oy, ow, oh in obstacle_data:
+    import random
+
+    # --- Create Obstacles Entities (Massive World for Chunk Testing) ---
+    print("Generating world...")
+    for _ in range(500):
         obs_ent = scene.get_pooled_entity()
+        ox = random.uniform(-2000.0, 2000.0)
+        oy = random.uniform(-2000.0, 2000.0)
+        ow = random.choice([32.0, 64.0])
+        oh = random.choice([32.0, 64.0])
         scene.add_transform(obs_ent, ox, oy)
         scene.add_collider(obs_ent, ow, oh)
-        obstacles.append(obs_ent)
+
+    # --- Create Enemies ---
+    for _ in range(50):
+        enemy_ent = scene.get_pooled_entity()
+        ex = random.uniform(-1000.0, 1000.0)
+        ey = random.uniform(-1000.0, 1000.0)
+        scene.add_transform(enemy_ent, ex, ey)
+        scene.add_collider(enemy_ent, 32.0, 32.0)
+        scene.add_enemy(enemy_ent, 50.0, 150.0, 10.0) # hp, speed, damage
 
     # Debug state
     debug_mode = False
@@ -95,13 +105,33 @@ def main():
             px += player_speed * dt
             is_moving = True
 
-        # Collision Check (ECS approach)
-        for obs_ent in obstacles:
-            if scene.has_collider(obs_ent):
-                ox, oy = scene.get_transform(obs_ent)
-                # Hardcoded sizes for now, ideally retrieved from a Collider component getter
-                ow, oh = 64.0, 64.0
-                player_size = 32.0
+        # 1. Update Chunking System
+        # Mark only entities within 1000 pixels of player as 'Active'
+        scene.update_active_chunks(px, py, 1000.0)
+        active_entities = scene.get_active_entities()
+
+        # 2. Process Enemies (AI)
+        # Enemies only move if they are in an active chunk
+        for ent in active_entities:
+            if scene.has_enemy(ent):
+                ex, ey = scene.get_transform(ent)
+
+                # Simple AI: Move towards player
+                dx = px - ex
+                dy = py - ey
+                dist = (dx**2 + dy**2)**0.5
+
+                if dist > 0 and dist < 500: # Aggro radius
+                    enemy_speed = 100.0 * dt
+                    ex += (dx / dist) * enemy_speed
+                    ey += (dy / dist) * enemy_speed
+                    scene.set_transform(ent, ex, ey)
+
+        # 3. Collision Check (Only against ACTIVE entities with colliders)
+        for ent in active_entities:
+            if ent != player_entity and scene.has_collider(ent) and not scene.has_enemy(ent):
+                ox, oy = scene.get_transform(ent)
+                ow, oh = scene.get_collider(ent)
 
                 # If player collides with an obstacle
                 if eng.check_collision_recs(px, py, player_size, player_size, ox, oy, ow, oh):
@@ -142,13 +172,23 @@ def main():
         # Start drawing in the camera's perspective
         camera.begin_mode()
 
-        # 1. Draw some world objects (obstacles) from ECS
-        for obs_ent in obstacles:
-            ox, oy = scene.get_transform(obs_ent)
-            ow, oh = 64.0, 64.0
-            eng.draw_rectangle(int(ox), int(oy), int(ow), int(oh), 0, 100, 0)
-            if debug_mode:
-                eng.draw_rectangle_lines(int(ox), int(oy), int(ow), int(oh), 255, 0, 0) # Red hitbox
+        # 1. Draw WORLD entities (Only active ones!)
+        for ent in active_entities:
+            if ent == player_entity:
+                continue # Draw player last
+
+            if scene.has_enemy(ent):
+                ex, ey = scene.get_transform(ent)
+                ew, eh = scene.get_collider(ent)
+                eng.draw_rectangle(int(ex), int(ey), int(ew), int(eh), 255, 0, 255) # Magenta enemies
+                if debug_mode:
+                    eng.draw_rectangle_lines(int(ex), int(ey), int(ew), int(eh), 255, 0, 0)
+            elif scene.has_collider(ent):
+                ox, oy = scene.get_transform(ent)
+                ow, oh = scene.get_collider(ent)
+                eng.draw_rectangle(int(ox), int(oy), int(ow), int(oh), 0, 100, 0) # Dark green trees
+                if debug_mode:
+                    eng.draw_rectangle_lines(int(ox), int(oy), int(ow), int(oh), 255, 0, 0)
 
         # 2. Draw the player from ECS
         # Here we simulate an animation.

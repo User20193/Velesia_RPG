@@ -28,7 +28,12 @@ PYBIND11_MODULE(engine, m) {
         .def("set_transform", &Scene::set_transform, py::arg("entity"), py::arg("x"), py::arg("y"), "Update existing Transform2D component")
         .def("get_transform", &Scene::get_transform, py::arg("entity"), "Get Transform2D component as (x, y) tuple")
         .def("add_collider", &Scene::add_collider, py::arg("entity"), py::arg("width"), py::arg("height"), "Add or replace Collider component")
-        .def("has_collider", &Scene::has_collider, py::arg("entity"), "Check if entity has a Collider");
+        .def("has_collider", &Scene::has_collider, py::arg("entity"), "Check if entity has a Collider")
+        .def("get_collider", &Scene::get_collider, py::arg("entity"), "Get Collider component as (width, height) tuple")
+        .def("add_enemy", &Scene::add_enemy, py::arg("entity"), py::arg("hp"), py::arg("speed"), py::arg("damage"), "Add or replace Enemy component")
+        .def("has_enemy", &Scene::has_enemy, py::arg("entity"), "Check if entity has an Enemy component")
+        .def("update_active_chunks", &Scene::update_active_chunks, py::arg("center_x"), py::arg("center_y"), py::arg("radius"), "Update which entities are active based on distance from center")
+        .def("get_active_entities", &Scene::get_active_entities, "Get a list of all currently active entities");
 
     // Bind GameCamera
     py::class_<GameCamera>(m, "GameCamera")
