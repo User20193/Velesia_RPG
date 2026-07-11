@@ -29,11 +29,17 @@ public:
     // Uses low-frequency simplex for base dirt and ridge noise for bumps/cracks
     bool generate_dirt(const std::string& filepath, int width, int height);
 
+    bool generate_stone(const std::string& filepath, int width, int height);
+    bool generate_wood(const std::string& filepath, int width, int height);
+    bool generate_sand(const std::string& filepath, int width, int height);
+
+    bool generate_grass_dirt_tileset(const std::string& filepath, int tile_size);
+
 private:
     int seed_;
 
     // Helper to generate seamless (tileable) 2D noise mapping a 2D coordinate to a 4D cylinder/torus
-    float get_seamless_noise(class FastNoiseLite& noise, float x, float y, float width, float height, float frequency);
+    float get_seamless_noise(class FastNoiseLite& noise, float x, float y, float width, float height, float freq_x, float freq_y = -1.0f);
 
     // Lerp between two colors based on a factor (0.0 to 1.0)
     struct ColorRGB { unsigned char r, g, b, a; };

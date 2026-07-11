@@ -14,16 +14,43 @@ except ImportError as e:
     sys.exit(1)
 
 def main():
+    print("========================================")
+    print("   Initializing RPG Engine...   ")
+    print("========================================")
+
+    # --- Pre-generate required procedural assets ---
+    assets_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+    if not os.path.exists(assets_dir):
+        os.makedirs(assets_dir)
+
+    generator = engine.TextureGenerator()
+    generator.set_seed(12345)
+
+    grass_path = os.path.join(assets_dir, "grass_bg.png")
+    stone_path = os.path.join(assets_dir, "stone_obs.png")
+    wood_path = os.path.join(assets_dir, "wood_obs.png")
+
+    if not os.path.exists(grass_path):
+        print("Generating grass background texture...")
+        generator.generate_grass(grass_path, 256, 256)
+
+    if not os.path.exists(stone_path):
+        print("Generating stone obstacle texture...")
+        generator.generate_stone(stone_path, 64, 64)
+
+    if not os.path.exists(wood_path):
+        print("Generating wood obstacle texture...")
+        generator.generate_wood(wood_path, 32, 32)
+
     # 1. Initialize the Engine
     # Create an 800x600 window with a title
     eng = engine.Engine(800, 600, "My 2D RPG (Python + C++)")
 
     # 2. Setup Texture Manager
     tex_mgr = eng.get_texture_manager()
-
-    # To load a texture later, you can do:
-    # tex_mgr.load_texture("player", "assets/player.png")
-    # For now, we will use draw_rectangle to represent the player
+    tex_mgr.load_texture("bg_grass", grass_path)
+    tex_mgr.load_texture("obs_stone", stone_path)
+    tex_mgr.load_texture("obs_wood", wood_path)
 
     # 3. Setup Camera
     camera = engine.GameCamera()
@@ -53,8 +80,9 @@ def main():
         obs_ent = scene.get_pooled_entity()
         ox = random.uniform(-2000.0, 2000.0)
         oy = random.uniform(-2000.0, 2000.0)
+        # We'll use width to determine texture later
         ow = random.choice([32.0, 64.0])
-        oh = random.choice([32.0, 64.0])
+        oh = ow # keep them square for simplicity
         scene.add_transform(obs_ent, ox, oy)
         scene.add_collider(obs_ent, ow, oh)
 
@@ -166,11 +194,22 @@ def main():
         # --- DRAW ---
         eng.begin_drawing()
 
-        # Draw background (a dark green color like grass)
-        eng.clear_background(34, 139, 34)
+        eng.clear_background(0, 0, 0)
 
         # Start drawing in the camera's perspective
         camera.begin_mode()
+
+        # Draw infinite procedural background by tiling the 256x256 grass texture
+        # We calculate the starting tile based on the camera position to ensure it covers the screen
+        cam_x = px - 400
+        cam_y = py - 300
+        start_tx = int(cam_x // 256) * 256
+        start_ty = int(cam_y // 256) * 256
+
+        # Draw a 4x4 grid of tiles to cover the 800x600 screen + scrolling margin
+        for ty in range(start_ty - 256, start_ty + 600 + 256, 256):
+            for tx in range(start_tx - 256, start_tx + 800 + 256, 256):
+                tex_mgr.draw_texture("bg_grass", tx, ty)
 
         # 1. Draw WORLD entities (Only active ones!)
         for ent in active_entities:
@@ -186,7 +225,13 @@ def main():
             elif scene.has_collider(ent):
                 ox, oy = scene.get_transform(ent)
                 ow, oh = scene.get_collider(ent)
-                eng.draw_rectangle(int(ox), int(oy), int(ow), int(oh), 0, 100, 0) # Dark green trees
+
+                # If it's a 64x64 obstacle, draw stone, if 32x32 draw wood
+                if ow >= 64.0:
+                    tex_mgr.draw_texture("obs_stone", int(ox), int(oy))
+                else:
+                    tex_mgr.draw_texture("obs_wood", int(ox), int(oy))
+
                 if debug_mode:
                     eng.draw_rectangle_lines(int(ox), int(oy), int(ow), int(oh), 255, 0, 0)
 

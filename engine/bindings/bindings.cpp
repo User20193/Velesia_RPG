@@ -27,7 +27,11 @@ PYBIND11_MODULE(engine, m) {
         .def("set_seed", &rpg::TextureGenerator::set_seed, py::arg("seed"), "Set the random seed for noise generation")
         .def("generate_grass", &rpg::TextureGenerator::generate_grass, py::arg("filepath"), py::arg("width"), py::arg("height"), "Generate a seamless grass texture PNG")
         .def("generate_water", &rpg::TextureGenerator::generate_water, py::arg("filepath"), py::arg("width"), py::arg("height"), "Generate a seamless water texture PNG")
-        .def("generate_dirt", &rpg::TextureGenerator::generate_dirt, py::arg("filepath"), py::arg("width"), py::arg("height"), "Generate a seamless dirt texture PNG");
+        .def("generate_dirt", &rpg::TextureGenerator::generate_dirt, py::arg("filepath"), py::arg("width"), py::arg("height"), "Generate a seamless dirt texture PNG")
+        .def("generate_stone", &rpg::TextureGenerator::generate_stone, py::arg("filepath"), py::arg("width"), py::arg("height"), "Generate a seamless stone texture PNG")
+        .def("generate_wood", &rpg::TextureGenerator::generate_wood, py::arg("filepath"), py::arg("width"), py::arg("height"), "Generate a seamless wood texture PNG")
+        .def("generate_sand", &rpg::TextureGenerator::generate_sand, py::arg("filepath"), py::arg("width"), py::arg("height"), "Generate a seamless sand texture PNG")
+        .def("generate_grass_dirt_tileset", &rpg::TextureGenerator::generate_grass_dirt_tileset, py::arg("filepath"), py::arg("tile_size"), "Generate a 3x3 tileset transition map between grass and dirt");
 
     // Bind Scene (ECS)
     py::class_<Scene>(m, "Scene")
