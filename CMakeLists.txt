@@ -45,13 +45,21 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(nlohmann_json)
 
 # 5. Create the Python module
-pybind11_add_module(engine src/bindings.cpp src/engine.cpp src/asset_manager.cpp)
+set(SOURCES
+    engine/bindings/bindings.cpp
+    engine/core/engine.cpp
+    engine/graphics/texture_manager.cpp
+    engine/graphics/camera.cpp
+    engine/ecs/scene.cpp
+    engine/assets/asset_manager.cpp
+)
+pybind11_add_module(engine ${SOURCES})
 
 # Link Raylib, EnTT, and json to the Python module
 target_link_libraries(engine PRIVATE raylib EnTT::EnTT nlohmann_json::nlohmann_json)
 
 # Include directories
-target_include_directories(engine PRIVATE src)
+target_include_directories(engine PRIVATE engine)
 
 # Ensure the output goes to the game directory so python can find it
 set_target_properties(engine PROPERTIES

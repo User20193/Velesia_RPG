@@ -1,3 +1,25 @@
+# Build directories
 build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Python specific
+__pycache__/
+*.pyc
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Compiled Python extensions
 *.so
 *.pyd
+*.dll
+*.exp
+*.lib
+
+# Editor files
+.vscode/
+.idea/
