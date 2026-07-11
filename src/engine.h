@@ -9,6 +9,7 @@ public:
     void unload_all();
     void load_texture(const std::string& name, const std::string& filepath);
     void draw_texture(const std::string& name, float x, float y);
+    void draw_texture_rec(const std::string& name, float source_x, float source_y, float source_w, float source_h, float dest_x, float dest_y);
 private:
     std::unordered_map<std::string, Texture2D> textures;
 };
@@ -52,9 +53,16 @@ public:
     float get_mouse_y();
 
     float get_delta_time();
+    int get_fps();
 
+    // Drawing
     void draw_rectangle(int x, int y, int width, int height, int r, int g, int b, int a = 255);
+    void draw_rectangle_lines(int x, int y, int width, int height, int r, int g, int b, int a = 255);
     void draw_line(int startPosX, int startPosY, int endPosX, int endPosY, int r, int g, int b, int a = 255);
+    void draw_text(const std::string& text, int x, int y, int fontSize, int r, int g, int b, int a = 255);
+
+    // Physics / Collision
+    bool check_collision_recs(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2);
 
     TextureManager& get_texture_manager() { return texture_manager; }
 

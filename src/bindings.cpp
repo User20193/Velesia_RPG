@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "engine.h"
 #include "raylib.h"
 
@@ -10,7 +11,10 @@ PYBIND11_MODULE(engine, m) {
     // Bind TextureManager
     py::class_<TextureManager>(m, "TextureManager")
         .def("load_texture", &TextureManager::load_texture, "Load a texture from a file")
-        .def("draw_texture", &TextureManager::draw_texture, "Draw a loaded texture");
+        .def("draw_texture", &TextureManager::draw_texture, "Draw a loaded texture")
+        .def("draw_texture_rec", &TextureManager::draw_texture_rec,
+            py::arg("name"), py::arg("source_x"), py::arg("source_y"), py::arg("source_w"), py::arg("source_h"),
+            py::arg("dest_x"), py::arg("dest_y"), "Draw a part of a texture");
 
     // Bind GameCamera
     py::class_<GameCamera>(m, "GameCamera")
@@ -36,8 +40,12 @@ PYBIND11_MODULE(engine, m) {
         .def("get_mouse_x", &Engine::get_mouse_x, "Get mouse X position on screen")
         .def("get_mouse_y", &Engine::get_mouse_y, "Get mouse Y position on screen")
         .def("get_delta_time", &Engine::get_delta_time, "Get time between frames")
+        .def("get_fps", &Engine::get_fps, "Get current frames per second")
         .def("draw_rectangle", &Engine::draw_rectangle, py::arg("x"), py::arg("y"), py::arg("width"), py::arg("height"), py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a") = 255, "Draw a simple rectangle")
+        .def("draw_rectangle_lines", &Engine::draw_rectangle_lines, py::arg("x"), py::arg("y"), py::arg("width"), py::arg("height"), py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a") = 255, "Draw rectangle outlines")
         .def("draw_line", &Engine::draw_line, py::arg("startX"), py::arg("startY"), py::arg("endX"), py::arg("endY"), py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a") = 255, "Draw a line")
+        .def("draw_text", &Engine::draw_text, py::arg("text"), py::arg("x"), py::arg("y"), py::arg("fontSize"), py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a") = 255, "Draw text")
+        .def("check_collision_recs", &Engine::check_collision_recs, py::arg("x1"), py::arg("y1"), py::arg("w1"), py::arg("h1"), py::arg("x2"), py::arg("y2"), py::arg("w2"), py::arg("h2"), "Check if two rectangles collide")
         .def("get_texture_manager", &Engine::get_texture_manager, py::return_value_policy::reference, "Get the texture manager");
 
     // Keyboard keys enum
@@ -52,6 +60,7 @@ PYBIND11_MODULE(engine, m) {
         .value("KEY_RIGHT", KEY_RIGHT)
         .value("KEY_SPACE", KEY_SPACE)
         .value("KEY_ESCAPE", KEY_ESCAPE)
+        .value("KEY_F3", KEY_F3)
         .export_values();
 
     // Mouse buttons enum

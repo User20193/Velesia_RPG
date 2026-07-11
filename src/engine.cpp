@@ -30,6 +30,17 @@ void TextureManager::draw_texture(const std::string& name, float x, float y) {
     }
 }
 
+void TextureManager::draw_texture_rec(const std::string& name, float source_x, float source_y, float source_w, float source_h, float dest_x, float dest_y) {
+    auto it = textures.find(name);
+    if (it != textures.end()) {
+        Rectangle source = { source_x, source_y, source_w, source_h };
+        Vector2 position = { dest_x, dest_y };
+        DrawTextureRec(it->second, source, position, WHITE);
+    } else {
+        std::cerr << "Warning: Texture '" << name << "' not found!" << std::endl;
+    }
+}
+
 // --- GameCamera ---
 
 GameCamera::GameCamera() {
@@ -121,10 +132,28 @@ float Engine::get_delta_time() {
     return GetFrameTime();
 }
 
+int Engine::get_fps() {
+    return GetFPS();
+}
+
 void Engine::draw_rectangle(int x, int y, int width, int height, int r, int g, int b, int a) {
     DrawRectangle(x, y, width, height, {(unsigned char)r, (unsigned char)g, (unsigned char)b, (unsigned char)a});
 }
 
+void Engine::draw_rectangle_lines(int x, int y, int width, int height, int r, int g, int b, int a) {
+    DrawRectangleLines(x, y, width, height, {(unsigned char)r, (unsigned char)g, (unsigned char)b, (unsigned char)a});
+}
+
 void Engine::draw_line(int startPosX, int startPosY, int endPosX, int endPosY, int r, int g, int b, int a) {
     DrawLine(startPosX, startPosY, endPosX, endPosY, {(unsigned char)r, (unsigned char)g, (unsigned char)b, (unsigned char)a});
+}
+
+void Engine::draw_text(const std::string& text, int x, int y, int fontSize, int r, int g, int b, int a) {
+    DrawText(text.c_str(), x, y, fontSize, {(unsigned char)r, (unsigned char)g, (unsigned char)b, (unsigned char)a});
+}
+
+bool Engine::check_collision_recs(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) {
+    Rectangle rec1 = { x1, y1, w1, h1 };
+    Rectangle rec2 = { x2, y2, w2, h2 };
+    return CheckCollisionRecs(rec1, rec2);
 }
